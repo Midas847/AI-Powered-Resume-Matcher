@@ -35,7 +35,7 @@ class ScoreImprovementService:
     the scoring process.
     """
 
-    def __init__(self, db: AsyncSession, max_retries: int = 5):
+    def __init__(self, db: AsyncSession, max_retries: int = 2):
         self.db = db
         self.max_retries = max_retries
         self.md_agent_manager = AgentManager(strategy="md")
@@ -166,7 +166,7 @@ class ScoreImprovementService:
             score = self.calculate_cosine_similarity(
                 emb, extracted_job_keywords_embedding
             )
-
+        
             if score > best_score:
                 return improved, score
 
@@ -215,6 +215,7 @@ class ScoreImprovementService:
             )
         )
 
+
         resume_embedding_task = asyncio.create_task(
             self.embedding_manager.embed(resume.content)
         )
@@ -228,6 +229,8 @@ class ScoreImprovementService:
         cosine_similarity_score = self.calculate_cosine_similarity(
             extracted_job_keywords_embedding, resume_embedding
         )
+
+        
         updated_resume, updated_score = await self.improve_score_with_llm(
             resume=resume.content,
             extracted_resume_keywords=extracted_resume_keywords,
@@ -237,6 +240,7 @@ class ScoreImprovementService:
             extracted_job_keywords_embedding=extracted_job_keywords_embedding,
         )
 
+        print(updated_score)
         resume_preview = await self.get_resume_for_previewer(
             updated_resume=updated_resume
         )
@@ -253,7 +257,7 @@ class ScoreImprovementService:
         }
 
         gc.collect()
-
+        # return {}
         return execution
 
     async def run_and_stream(self, resume_id: str, job_id: str) -> AsyncGenerator:
@@ -261,12 +265,11 @@ class ScoreImprovementService:
         Main method to run the scoring and improving process and return dict.
         """
 
-        yield f"data: {json.dumps({'status': 'starting', 'message': 'Analyzing resume and job description...'})}\n\n"
+        # yield f"data: {json.dumps({'status': 'starting', 'message': 'Analyzing resume and job description...'})}\n\n"
         await asyncio.sleep(2)
 
         resume, processed_resume = await self._get_resume(resume_id)
         job, processed_job = await self._get_job(job_id)
-
         yield f"data: {json.dumps({'status': 'parsing', 'message': 'Parsing resume content...'})}\n\n"
         await asyncio.sleep(2)
 
@@ -291,7 +294,7 @@ class ScoreImprovementService:
         cosine_similarity_score = self.calculate_cosine_similarity(
             extracted_job_keywords_embedding, resume_embedding
         )
-
+        print(cosine_similarity_score)
         yield f"data: {json.dumps({'status': 'scored', 'score': cosine_similarity_score})}\n\n"
 
         yield f"data: {json.dumps({'status': 'improving', 'message': 'Generating improvement suggestions...'})}\n\n"

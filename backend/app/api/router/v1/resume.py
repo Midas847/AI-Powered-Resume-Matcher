@@ -160,7 +160,7 @@ async def score_and_improve(
                 message="invalid value passed in `job_id` field, please try again with valid job_id."
             )
         score_improvement_service = ScoreImprovementService(db=db)
-
+        stream=False
         if stream:
             return StreamingResponse(
                 content=score_improvement_service.run_and_stream(
